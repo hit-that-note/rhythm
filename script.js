@@ -15,7 +15,11 @@ function onYouTubeIframeAPIReady() {
             'controls': 0,
             'disablekb': 1,
             'fs': 0,
-            'rel': 0
+            'rel': 0,
+            'adblock': 1, // Disable ads
+            'iv_load_policy': 3, // Hide video annotations
+            'modestbranding': 1, // Reduce YouTube branding
+            'origin': window.location.origin // Set origin for security
         },
         events: {
             'onReady': onPlayerReady,
