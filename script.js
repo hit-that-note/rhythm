@@ -1,46 +1,134 @@
+// Ad blocking functionality
+const originalFetch = window.fetch;
+window.fetch = function(...args) {
+    if (args[0] && typeof args[0] === 'string' && (
+        args[0].includes('ad_break') || 
+        args[0].includes('get_midroll_info') ||
+        args[0].includes('adunit') ||
+        args[0].includes('pagead')
+    )) {
+        console.log('Blocked ad request:', args[0]);
+        return new Promise(() => {}); // Never resolve, effectively blocking the ad
+    }
+    return originalFetch.apply(this, args);
+};
+
+const originalXHROpen = XMLHttpRequest.prototype.open;
+XMLHttpRequest.prototype.open = function(method, url, ...rest) {
+    if (url && typeof url === 'string' && (
+        url.includes('ad_break') || 
+        url.includes('get_midroll_info') ||
+        url.includes('adunit') ||
+        url.includes('pagead')
+    )) {
+        console.log('Blocked XHR ad request:', url);
+        return; // Block the request
+    }
+    return originalXHROpen.call(this, method, url, ...rest);
+};
+
 // YouTube Player API
 let player;
 let currentSongId = null;
 let isGameStarted = false;
+let pendingSongId = null; // Variable to store songId before player is ready
 
 // Initialize YouTube Player
 function onYouTubeIframeAPIReady() {
     console.log('YouTube IFrame API Ready');
-    player = new YT.Player('youtube-player', {
-        height: '360',
-        width: '640',
-        videoId: '',
-        playerVars: {
-            'playsinline': 1,
-            'controls': 0,
-            'disablekb': 1,
-            'fs': 0,
-            'rel': 0,
-            'adblock': 1, // Disable ads
-            'iv_load_policy': 3, // Hide video annotations
-            'modestbranding': 1, // Reduce YouTube branding
-            'origin': window.location.origin // Set origin for security
-        },
-        events: {
-            'onReady': onPlayerReady,
-            'onStateChange': onPlayerStateChange
-        }
-    });
+    try {
+        player = new YT.Player('youtube-player', {
+            height: '360',
+            width: '640',
+            videoId: '',
+            playerVars: {
+                'playsinline': 1,
+                'controls': 0,
+                'disablekb': 1,
+                'fs': 0,
+                'rel': 0,
+                'adblock': 1,
+                'iv_load_policy': 3,
+                'modestbranding': 1,
+                'origin': window.location.origin,
+                'enablejsapi': 1,
+                'widget_referrer': window.location.origin,
+                'host': 'https://www.youtube-nocookie.com',
+                'autoplay': 0,
+                'mute': 0,
+                'loop': 0,
+                'showinfo': 0,
+                'cc_load_policy': 0,
+                'cc_lang_pref': 'us',
+                'hl': 'en',
+                'color': 'white',
+                'theme': 'dark'
+            },
+            events: {
+                'onReady': onPlayerReady,
+                'onStateChange': onPlayerStateChange,
+                'onError': onPlayerError
+            }
+        });
+    } catch (error) {
+        console.error('Error initializing YouTube player:', error);
+    }
+}
+
+// Add error handling for YouTube API
+function onPlayerError(event) {
+    console.error('YouTube Player Error:', event.data);
+    // alert('Error loading video. Please try again.'); // Removed alert to avoid interrupting gameplay
+}
+
+// Ensure the API is loaded
+if (typeof YT === 'undefined' || typeof YT.Player === 'undefined') {
+    console.log('YouTube API not loaded, loading now...');
+    const tag = document.createElement('script');
+    tag.src = 'https://www.youtube.com/iframe_api';
+    const firstScriptTag = document.getElementsByTagName('script')[0];
+    firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
 }
 
 function onPlayerReady(event) {
     console.log('YouTube Player Ready');
-    // Player is ready
-    // Old logic: Start interval-based note generation here if game has started
-    // The startNoteGeneration function is now called from startGame
+    setupAdHandlers();
+    
+    // If there's a pending song ID, load and play it now
+    if (pendingSongId) {
+        console.log('Player ready, loading pending video:', pendingSongId);
+        player.loadVideoById(pendingSongId);
+        pendingSongId = null;
+        if (isGameStarted) {
+            startNoteGeneration();
+        }
+    }
 }
 
 function onPlayerStateChange(event) {
     console.log('YouTube Player State Change:', event.data);
+    
     // Handle video state changes
     if (event.data === YT.PlayerState.ENDED) {
         endGame();
-    } // Removed the PLAYING state check for starting note generation
+    } 
+    
+    // Handle ad states
+    if (event.data === YT.PlayerState.PLAYING) {
+        // Check if current video is an ad
+        const currentVideoData = player.getVideoData();
+        if (currentVideoData && currentVideoData.isAd) {
+            console.log('Ad detected, attempting to skip...');
+            try {
+                player.seekTo(player.getDuration());
+            } catch (error) {
+                console.error('Error skipping ad:', error);
+            }
+        } else if (isGameStarted) {
+            console.log('Video started playing, starting note generation.');
+            startNoteGeneration();
+        }
+    }
 }
 
 // Song Selection
@@ -58,25 +146,29 @@ function startGame(songId) {
     // Removed beatmap loading
     // currentBeatmap = beatmaps[songId] || [];
     // nextNoteIndex = 0;
-    
+
     // Hide song selection, show game screen
     document.getElementById('song-selection').style.display = 'none';
     document.getElementById('game-screen').style.display = 'block';
-    
-    // Load and play the selected song
-    if (player) {
-        player.loadVideoById(songId);
-        player.playVideo(); // Reverted to auto-play for simplicity in this mode
-        console.log('Loading and playing video:', songId);
-    } else {
-        console.error('YouTube player not initialized.');
-    }
-    
+
     // Start the game
     isGameStarted = true;
     resetGame();
-    console.log('Game started, initiating interval-based note generation.');
-    startNoteGeneration(); // Reverted to starting interval generation here
+
+    // Load and play the selected song only if player is ready
+    if (player && player.getPlayerState) { // Check if player object exists and seems ready
+        console.log('Player already initialized, loading and playing video:', songId);
+        player.loadVideoById(songId);
+        // player.playVideo(); // Auto-play might still be blocked, will rely on user interaction or state change
+        // Note generation is now started by the onPlayerStateChange (PLAYING) event
+    } else {
+        console.log('Player not yet initialized, storing songId and waiting for onPlayerReady:', songId);
+        pendingSongId = songId; // Store the songId to be loaded when player is ready
+        // Note generation will be started by onPlayerReady or onPlayerStateChange (PLAYING)
+    }
+
+    console.log('Game started, waiting for video to load/play to start note generation.');
+    // Note generation is now started by the onPlayerReady or onPlayerStateChange (PLAYING) event
 }
 
 function endGame() {
@@ -790,4 +882,59 @@ inputButtons.forEach((button, index) => {
     button.addEventListener('touchmove', (event) => {
         event.preventDefault();
     });
-}); 
+});
+
+// Add ad-related event handlers
+function setupAdHandlers() {
+    // Create a MutationObserver to watch for ad-related elements
+    const observer = new MutationObserver((mutations) => {
+        mutations.forEach((mutation) => {
+            if (mutation.addedNodes) {
+                mutation.addedNodes.forEach((node) => {
+                    if (node.nodeType === 1) { // Element node
+                        // Check for ad-related elements
+                        if (node.classList && (
+                            node.classList.contains('ytp-ad-overlay-container') ||
+                            node.classList.contains('ytp-ad-text') ||
+                            node.classList.contains('ytp-ad-skip-button')
+                        )) {
+                            console.log('Ad element detected, attempting to remove...');
+                            try {
+                                node.remove();
+                            } catch (error) {
+                                console.error('Error removing ad element:', error);
+                            }
+                        }
+                    }
+                });
+            }
+        });
+    });
+
+    // Start observing the player container
+    const playerContainer = document.getElementById('youtube-player');
+    if (playerContainer) {
+        observer.observe(playerContainer, {
+            childList: true,
+            subtree: true
+        });
+    }
+
+    // Add event listener for ad-related messages
+    window.addEventListener('message', (event) => {
+        if (event.source === player.getIframe()) {
+            try {
+                const data = JSON.parse(event.data);
+                if (data && data.event === 'onAdStateChange') {
+                    console.log('Ad state change detected:', data);
+                    // Attempt to skip ad
+                    if (player && player.seekTo) {
+                        player.seekTo(player.getDuration());
+                    }
+                }
+            } catch (error) {
+                // Ignore non-JSON messages
+            }
+        }
+    });
+} 
