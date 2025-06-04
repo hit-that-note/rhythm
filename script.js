@@ -57,15 +57,14 @@ function onYouTubeIframeAPIReady() {
                 'disablekb': 1,
                 'fs': 0,
                 'rel': 0,
-                'adblock': 1,
                 'iv_load_policy': 3,
                 'modestbranding': 1,
                 'origin': window.location.origin,
                 'enablejsapi': 1,
                 'widget_referrer': window.location.origin,
                 'host': 'https://www.youtube-nocookie.com',
-                'autoplay': 0,
-                'mute': 0,
+                'autoplay': 1, // Enable autoplay
+                'mute': 0, // Ensure unmuted
                 'loop': 0,
                 'showinfo': 0,
                 'cc_load_policy': 0,
@@ -107,7 +106,12 @@ function onPlayerReady(event) {
     // If there's a pending song ID, load and play it now
     if (pendingSongId) {
         console.log('Player ready, loading pending video:', pendingSongId);
-        player.loadVideoById(pendingSongId);
+        player.loadVideoById({
+            videoId: pendingSongId,
+            startSeconds: 0,
+            suggestedQuality: 'default'
+        });
+        player.playVideo(); // Explicitly call playVideo
         pendingSongId = null;
         if (isGameStarted) {
             startNoteGeneration();
@@ -131,7 +135,6 @@ function onPlayerStateChange(event) {
             console.log('Ad detected, attempting to skip...');
             try {
                 player.seekTo(player.getDuration());
-                player.mute(); // Mute during ads
             } catch (error) {
                 console.error('Error skipping ad:', error);
             }
@@ -163,9 +166,6 @@ document.querySelectorAll('.song-card').forEach(card => {
 function startGame(songId) {
     console.log('startGame function called with songId:', songId);
     currentSongId = songId;
-    // Removed beatmap loading
-    // currentBeatmap = beatmaps[songId] || [];
-    // nextNoteIndex = 0;
 
     // Hide song selection, show game screen
     document.getElementById('song-selection').style.display = 'none';
@@ -176,19 +176,20 @@ function startGame(songId) {
     resetGame();
 
     // Load and play the selected song only if player is ready
-    if (player && player.getPlayerState) { // Check if player object exists and seems ready
+    if (player && player.getPlayerState) {
         console.log('Player already initialized, loading and playing video:', songId);
-        player.loadVideoById(songId);
-        // player.playVideo(); // Auto-play might still be blocked, will rely on user interaction or state change
-        // Note generation is now started by the onPlayerStateChange (PLAYING) event
+        player.loadVideoById({
+            videoId: songId,
+            startSeconds: 0,
+            suggestedQuality: 'default'
+        });
+        player.playVideo(); // Explicitly call playVideo
     } else {
         console.log('Player not yet initialized, storing songId and waiting for onPlayerReady:', songId);
-        pendingSongId = songId; // Store the songId to be loaded when player is ready
-        // Note generation will be started by onPlayerReady or onPlayerStateChange (PLAYING)
+        pendingSongId = songId;
     }
 
     console.log('Game started, waiting for video to load/play to start note generation.');
-    // Note generation is now started by the onPlayerReady or onPlayerStateChange (PLAYING) event
 }
 
 function endGame() {
