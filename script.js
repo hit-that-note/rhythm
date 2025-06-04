@@ -5,7 +5,12 @@ window.fetch = function(...args) {
         args[0].includes('ad_break') || 
         args[0].includes('get_midroll_info') ||
         args[0].includes('adunit') ||
-        args[0].includes('pagead')
+        args[0].includes('pagead') ||
+        args[0].includes('googlesyndication') ||
+        args[0].includes('doubleclick') ||
+        args[0].includes('adservice') ||
+        args[0].includes('imasdk') ||
+        args[0].includes('manifest.googlevideo.com/api/manifest/ads')
     )) {
         console.log('Blocked ad request:', args[0]);
         return new Promise(() => {}); // Never resolve, effectively blocking the ad
@@ -19,7 +24,12 @@ XMLHttpRequest.prototype.open = function(method, url, ...rest) {
         url.includes('ad_break') || 
         url.includes('get_midroll_info') ||
         url.includes('adunit') ||
-        url.includes('pagead')
+        url.includes('pagead') ||
+        url.includes('googlesyndication') ||
+        url.includes('doubleclick') ||
+        url.includes('adservice') ||
+        url.includes('imasdk') ||
+        url.includes('manifest.googlevideo.com/api/manifest/ads')
     )) {
         console.log('Blocked XHR ad request:', url);
         return; // Block the request
@@ -121,12 +131,22 @@ function onPlayerStateChange(event) {
             console.log('Ad detected, attempting to skip...');
             try {
                 player.seekTo(player.getDuration());
+                player.mute(); // Mute during ads
             } catch (error) {
                 console.error('Error skipping ad:', error);
             }
         } else if (isGameStarted) {
             console.log('Video started playing, starting note generation.');
             startNoteGeneration();
+        }
+    }
+    
+    // Handle buffering state to skip ads
+    if (event.data === YT.PlayerState.BUFFERING) {
+        const currentTime = player.getCurrentTime();
+        if (currentTime < 1) {
+            console.log('Buffering at start, attempting to skip potential ad...');
+            player.seekTo(1);
         }
     }
 }
@@ -1244,11 +1264,201 @@ function setupYouTubeSpecificAdBlocking() {
     };
 }
 
-// Add to the existing setupAdHandlers function
+// Function to block specific overlay ads
+function blockSpecificOverlayAds() {
+    // CSS selectors for specific overlay ads
+    const overlayAdSelectors = [
+        'div[class*="ytp-ad-overlay"]',
+        'div[class*="ytp-ad-skip-button"]',
+        'div[class*="ytp-ad-text"]',
+        'div[class*="ytp-ad-image"]',
+        'div[class*="ytp-ad-video"]',
+        'div[class*="ytp-ad-audio"]',
+        'div[class*="ytp-ad-document"]',
+        'div[class*="ytp-ad-archive"]',
+        'div[class*="ytp-ad-code"]',
+        'div[class*="ytp-ad-data"]',
+        'div[class*="ytp-ad-other"]'
+    ];
+
+    // Create and inject CSS to hide overlay ads
+    const style = document.createElement('style');
+    style.textContent = overlayAdSelectors.map(selector => `${selector} { display: none !important; }`).join('\n');
+    document.head.appendChild(style);
+
+    // Aggressive MutationObserver to remove overlay ads
+    const observer = new MutationObserver((mutations) => {
+        mutations.forEach((mutation) => {
+            mutation.addedNodes.forEach((node) => {
+                if (node.nodeType === 1) { // Element node
+                    overlayAdSelectors.forEach(selector => {
+                        try {
+                            if (node.matches && node.matches(selector)) {
+                                console.log('Aggressively removing overlay ad element via MutationObserver:', node);
+                                node.remove();
+                            } else if (node.querySelectorAll) {
+                                // Check children as well
+                                node.querySelectorAll(selector).forEach(element => {
+                                    console.log('Aggressively removing overlay ad element (child) via MutationObserver:', element);
+                                    element.remove();
+                                });
+                            }
+                        } catch (e) {
+                            console.error('Error processing node in MutationObserver:', e);
+                        }
+                    });
+                }
+            });
+        });
+    });
+
+    // Observe the entire document for changes
+    observer.observe(document.documentElement, {
+        childList: true,
+        subtree: true
+    });
+}
+
+// Further enhanced ad blocking with broader DOM and network targeting
+function setupUltraAdBlocking() {
+    // Broader and pattern-based DOM selectors for potential ad elements
+    const ultraAdSelectors = [
+        'div[id*="ad"]', // Any div with ID containing "ad"
+        'div[class*="ad"]', // Any div with class containing "ad"
+        'iframe[src*="ad"]', // Any iframe with src containing "ad"
+        'script[src*="ad"]', // Any script with src containing "ad"
+        'div[id*="sponsor"]', // Any div with ID containing "sponsor"
+        'div[class*="sponsor"]', // Any div with class containing "sponsor"
+        'div[id*="promo"]', // Any div with ID containing "promo"
+        'div[class*="promo"]', // Any div with class containing "promo"
+        '*[id*="ad-container"]', // Any element with ID containing "ad-container"
+        '*[class*="ad-container"]', // Any element with class containing "ad-container"
+        '*[id*="ad-wrapper"]', // Any element with ID containing "ad-wrapper"
+        '*[class*="ad-wrapper"]', // Any element with class containing "ad-wrapper"
+        '*[id*="player-ads"]', // Any element with ID containing "player-ads"
+        '*[class*="player-ads"]', // Any element with class containing "player-ads"
+        '*[id*="video-ads"]', // Any element with ID containing "video-ads"
+        '*[class*="video-ads"]', // Any element with class containing "video-ads"
+        // Specific YouTube ad element patterns
+        'div[class^="ytp-ad-"]', // Elements with class names starting with "ytp-ad-"
+        'div[class*="-ad-container"]', // Elements with class names containing "-ad-container"
+        'div[class*="-ad-overlay"]', // Elements with class names containing "-ad-overlay"
+        'div[class*="-skip-button"]', // Elements with class names containing "-skip-button"
+        'div[class*="-ad-message"]', // Elements with class names containing "-ad-message"
+        'div[class*="-ad-action"]', // Elements with class names containing "-ad-action"
+        'div[class*="-ad-player"]', // Elements with class names containing "-ad-player"
+    ];
+
+    // Create and inject CSS to hide these elements immediately
+    const style = document.createElement('style');
+    style.textContent = ultraAdSelectors.map(selector => `${selector} { display: none !important; }`).join('\n');
+    document.head.appendChild(style);
+
+    // Aggressive MutationObserver to remove any added nodes matching the selectors
+    const observer = new MutationObserver((mutations) => {
+        mutations.forEach((mutation) => {
+            mutation.addedNodes.forEach((node) => {
+                if (node.nodeType === 1) { // Element node
+                    ultraAdSelectors.forEach(selector => {
+                        try {
+                            if (node.matches && node.matches(selector)) {
+                                console.log('Aggressively removing ad element via MutationObserver:', node);
+                                node.remove();
+                            } else if (node.querySelectorAll) {
+                                // Check children as well
+                                node.querySelectorAll(selector).forEach(element => {
+                                    console.log('Aggressively removing ad element (child) via MutationObserver:', element);
+                                    element.remove();
+                                });
+                            }
+                        } catch (e) {
+                            console.error('Error processing node in MutationObserver:', e);
+                        }
+                    });
+                }
+            });
+        });
+    });
+
+    // Observe the entire document for changes
+    observer.observe(document.documentElement, {
+        childList: true,
+        subtree: true
+    });
+
+    // Broader network request blocking
+    const broadBlockedPatterns = [
+        /\/\/pagead2\.googlesyndication\.com\//, // Google AdSense
+        /\/\/static\.doubleclick\.net\//, // DoubleClick
+        /\/\/www\.googletagservices\.com\//, // Google Publisher Tags
+        /\/\/www\.googleadservices\.com\//, // Google Ad Services
+        /\/\/tpc\.googlesyndication\.com\//, // Third-party content from Google Syndication
+        /\/\/r[\d]+\.snrs\.youtube\.com\/ads\//, // YouTube ad specific URLs
+        /\/\/manifest\.googlevideo\.com\/api\/manifest\/ads\//, // Ad manifests
+        /\/\/imasdk\.googleapis\.com\//, // IMA SDK (Interactive Media Ads SDK)
+        /\/\/googleads\.g\.doubleclick\.net\//, // Google Ads via DoubleClick
+        /\/\/ad\.doubleclick\.net\//, // DoubleClick Ads
+        /\/\/www\.youtube\.com\/get_video_info.*&adpr=/ // Ad parameters in get_video_info
+    ];
+
+    // Enhance fetch blocking with broader patterns
+    const originalFetch = window.fetch;
+    window.fetch = function(...args) {
+        const url = args[0]?.url || args[0];
+        if (url && typeof url === 'string' && broadBlockedPatterns.some(pattern => pattern.test(url))) {
+            console.log('Blocked aggressive fetch request to:', url);
+            return new Promise(() => {}); // Never resolve
+        }
+        return originalFetch.apply(this, args);
+    };
+
+    // Enhance XHR blocking with broader patterns
+    const originalXHROpen = XMLHttpRequest.prototype.open;
+    XMLHttpRequest.prototype.open = function(method, url, ...rest) {
+        if (url && typeof url === 'string' && broadBlockedPatterns.some(pattern => pattern.test(url))) {
+            console.log('Blocked aggressive XHR request to:', url);
+            return; // Block the request
+        }
+        return originalXHROpen.call(this, method, url, ...rest);
+    };
+
+    // Enhance WebSocket blocking with broader patterns
+    const originalWebSocket = window.WebSocket;
+    window.WebSocket = function(url, ...args) {
+        if (url && typeof url === 'string' && broadBlockedPatterns.some(pattern => pattern.test(url))) {
+            console.log('Blocked aggressive WebSocket connection to:', url);
+            return new originalWebSocket('ws://localhost'); // Redirect or block
+        }
+        return new originalWebSocket(url, ...args);
+    };
+
+    // Add event listener to attempt to skip ads on state change to playing
+    // This is already in onPlayerStateChange, ensuring it's called should be enough
+
+    // Periodically check and remove any remaining ad elements that might have slipped through
+    setInterval(() => {
+        ultraAdSelectors.forEach(selector => {
+            document.querySelectorAll(selector).forEach(element => {
+                 console.log('Periodically removing persistent ad element:', element);
+                 element.remove();
+            });
+        });
+    }, 1000); // Check every second
+}
+
+// Update setupAdHandlers to include the new ultra blocking function
 function setupAdHandlers() {
     blockAdIframes();
     setupEnhancedAdBlocking();
     setupYouTubeSpecificAdBlocking();
+    blockSpecificOverlayAds();
+    setupUltraAdBlocking();
+    
+    // Add CSP meta tag to block ad resources
+    const cspMeta = document.createElement('meta');
+    cspMeta.httpEquiv = 'Content-Security-Policy';
+    cspMeta.content = "connect-src 'self' https://www.youtube.com https://www.youtube-nocookie.com; script-src 'self'; frame-src https://www.youtube-nocookie.com";
+    document.head.appendChild(cspMeta);
     
     // Add additional ad-related class blocking
     const adClasses = [
@@ -1261,19 +1471,35 @@ function setupAdHandlers() {
         'ytp-ad-skip-button-container',
         'ytp-ad-skip-button-icon',
         'ytp-ad-skip-button-text',
-        'ytp-ad-skip-button-modern:active',
-        'ytp-ad-skip-button-modern:hover',
-        'ytp-ad-skip-button-modern:focus',
-        'ytp-ad-skip-button-modern:disabled',
-        'ytp-ad-skip-button-modern:not([aria-disabled=true]):hover',
-        'ytp-ad-skip-button-modern:not([aria-disabled=true]):focus',
-        'ytp-ad-skip-button-modern:not([aria-disabled=true]):active',
-        'ytp-ad-skip-button-modern:not([aria-disabled=true]):disabled',
-        'ytp-ad-skip-button-modern:not([aria-disabled=true]):not(:hover):not(:focus):not(:active):not(:disabled)',
-        'ytp-ad-skip-button-modern:not([aria-disabled=true]):not(:hover):not(:focus):not(:active):not(:disabled):hover',
-        'ytp-ad-skip-button-modern:not([aria-disabled=true]):not(:hover):not(:focus):not(:active):not(:disabled):focus',
-        'ytp-ad-skip-button-modern:not([aria-disabled=true]):not(:hover):not(:focus):not(:active):not(:disabled):active',
-        'ytp-ad-skip-button-modern:not([aria-disabled=true]):not(:hover):not(:focus):not(:active):not(:disabled):disabled'
+        'ytp-ad-message-container',
+        'ytp-ad-action-interstitial',
+        'ytp-ad-action-interstitial-background-container',
+        'ytp-ad-action-interstitial-content',
+        'ytp-ad-action-interstitial-dismiss-button',
+        'ytp-ad-action-interstitial-headline',
+        'ytp-ad-action-interstitial-description',
+        'ytp-ad-action-interstitial-action-button',
+        'ytp-ad-action-interstitial-action-button-text',
+        'ytp-ad-action-interstitial-action-button-icon',
+        'ytp-ad-action-interstitial-action-button-icon-container',
+        'ytp-ad-action-interstitial-action-button-icon-svg',
+        'ytp-ad-action-interstitial-action-button-icon-path',
+        'ytp-ad-action-interstitial-action-button-icon-circle',
+        'ytp-ad-action-interstitial-action-button-icon-rect',
+        'ytp-ad-action-interstitial-action-button-icon-polygon',
+        'ytp-ad-action-interstitial-action-button-icon-line',
+        'ytp-ad-action-interstitial-action-button-icon-ellipse',
+        'ytp-ad-action-interstitial-action-button-icon-polyline',
+        'ytp-ad-action-interstitial-action-button-icon-path',
+        'ytp-ad-action-interstitial-action-button-icon-text',
+        'ytp-ad-action-interstitial-action-button-icon-image',
+        'ytp-ad-action-interstitial-action-button-icon-video',
+        'ytp-ad-action-interstitial-action-button-icon-audio',
+        'ytp-ad-action-interstitial-action-button-icon-document',
+        'ytp-ad-action-interstitial-action-button-icon-archive',
+        'ytp-ad-action-interstitial-action-button-icon-code',
+        'ytp-ad-action-interstitial-action-button-icon-data',
+        'ytp-ad-action-interstitial-action-button-icon-other'
     ];
 
     // Create a style element to hide ad-related elements
