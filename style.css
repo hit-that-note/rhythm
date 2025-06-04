@@ -170,6 +170,12 @@ body {
     font-size: 1.5em;
     transition: background-color 0.1s ease; /* Smooth transition for feedback */
     border-radius: 8px; /* More rounded buttons */
+    -webkit-tap-highlight-color: transparent; /* Remove tap highlight on mobile */
+    touch-action: none; /* Prevent browser touch actions */
+    user-select: none; /* Prevent text selection */
+    -webkit-user-select: none; /* Safari */
+    -moz-user-select: none; /* Firefox */
+    -ms-user-select: none; /* IE/Edge */
 }
 
 .input-button:hover {
@@ -179,6 +185,24 @@ body {
 .input-button.hit {
     background-color: #fff; /* White flash on hit */
     box-shadow: 0 0 15px 5px rgba(255, 255, 255, 0.7); /* Optional: Add a brighter glow */
+}
+
+.input-button.pressed {
+    background-color: #444; /* Darker when pressed */
+    transform: scale(0.95); /* Slight scale down effect when pressed */
+}
+
+/* Add media query for mobile devices */
+@media (max-width: 768px) {
+    .input-button {
+        width: 70px; /* Slightly larger for better touch targets */
+        height: 55px;
+        font-size: 1.8em; /* Larger text for better visibility */
+    }
+
+    .input-area {
+        gap: 15px; /* Slightly more space between buttons on mobile */
+    }
 }
 
 .note {
