@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rhythm Game</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- Song Selection Screen -->
+    <div id="song-selection" class="song-selection">
+        <h1>Select a Song</h1>
+        <div class="song-grid">
+            <div class="song-card" data-song="5DMMNVyBil8">
+                <div class="song-thumbnail">
+                    <img src="https://img.youtube.com/vi/5DMMNVyBil8/maxresdefault.jpg" alt="REDALiCE">
+                </div>
+                <div class="song-info">
+                    <h3>REDALiCE</h3>
+                    <p>Artist: REDALiCE</p>
+                </div>
+            </div>
+            <div class="song-card" data-song="FyQQiNBz5gk">
+                <div class="song-thumbnail">
+                    <img src="https://img.youtube.com/vi/FyQQiNBz5gk/maxresdefault.jpg" alt="Sta">
+                </div>
+                <div class="song-info">
+                    <h3>Sta</h3>
+                    <p>Artist: Sta</p>
+                </div>
+            </div>
+            <div class="song-card" data-song="OICaXlNERQM">
+                <div class="song-thumbnail">
+                    <img src="https://img.youtube.com/vi/OICaXlNERQM/maxresdefault.jpg" alt="Sta">
+                </div>
+                <div class="song-info">
+                    <h3>Sta 2</h3>
+                    <p>Artist: Sta</p>
+                </div>
+            </div>
+            <div class="song-card" data-song="IAWfOhT8sXo">
+                <div class="song-thumbnail">
+                    <img src="https://img.youtube.com/vi/IAWfOhT8sXo/maxresdefault.jpg" alt="Onoken">
+                </div>
+                <div class="song-info">
+                    <h3>Onoken</h3>
+                    <p>Artist: Onoken</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Game Screen (initially hidden) -->
+    <div id="game-screen" class="game-screen" style="display: none;">
+        <div class="container">
+            <div class="game-area">
+                <div class="top-bar">
+                    <div class="score-display">Score: 0</div>
+                    <div class="accuracy-display">Accuracy: 100%</div>
+                    <div class="streak-display">Streak: 0</div>
+                </div>
+                <div class="game-container">
+                    <div class="game-lanes">
+                        <div class="lane"></div>
+                        <div class="lane"></div>
+                        <div class="lane"></div>
+                        <div class="lane"></div>
+                        <div class="hit-crossbar"></div>
+                    </div>
+                    <div class="input-area">
+                        <div class="input-button">A</div>
+                        <div class="input-button">S</div>
+                        <div class="input-button">D</div>
+                        <div class="input-button">F</div>
+                    </div>
+                </div>
+                <div class="chat-area">
+                    <p>Chat coming soon...</p>
+                </div>
+            </div>
+
+            <div class="side-panel">
+                <div id="youtube-player"></div>
+                <div class="song-info">
+                    <h3>Nine Circles</h3>
+                    <p>Artist: Zobros</p>
+                </div>
+                <div class="visualizer"></div>
+                <div class="volume-controls">
+                    <span>Volume</span>
+                    <div class="volume-bar"></div>
+                    <button>-</button>
+                    <button>+</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Load YouTube IFrame API -->
+    <script src="https://www.youtube.com/iframe_api"></script>
+    <script src="script.js"></script>
+</body>
+</html> 
