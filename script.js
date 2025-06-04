@@ -884,57 +884,217 @@ inputButtons.forEach((button, index) => {
     });
 });
 
-// Add ad-related event handlers
-function setupAdHandlers() {
-    // Create a MutationObserver to watch for ad-related elements
+// Additional ad blocking functionality
+function blockAdIframes() {
     const observer = new MutationObserver((mutations) => {
         mutations.forEach((mutation) => {
-            if (mutation.addedNodes) {
-                mutation.addedNodes.forEach((node) => {
-                    if (node.nodeType === 1) { // Element node
-                        // Check for ad-related elements
-                        if (node.classList && (
-                            node.classList.contains('ytp-ad-overlay-container') ||
-                            node.classList.contains('ytp-ad-text') ||
-                            node.classList.contains('ytp-ad-skip-button')
-                        )) {
-                            console.log('Ad element detected, attempting to remove...');
-                            try {
-                                node.remove();
-                            } catch (error) {
-                                console.error('Error removing ad element:', error);
-                            }
+            mutation.addedNodes.forEach((node) => {
+                if (node.nodeType === 1) { // Element node
+                    // Block ad iframes
+                    if (node.tagName === 'IFRAME') {
+                        const src = node.src || '';
+                        if (src.includes('googleads') || 
+                            src.includes('doubleclick') || 
+                            src.includes('adservice') ||
+                            src.includes('pagead')) {
+                            console.log('Blocking ad iframe:', src);
+                            node.remove();
                         }
                     }
-                });
-            }
+                    // Block ad scripts
+                    if (node.tagName === 'SCRIPT') {
+                        const src = node.src || '';
+                        const content = node.textContent || '';
+                        if (src.includes('googleads') || 
+                            src.includes('doubleclick') || 
+                            src.includes('adservice') ||
+                            content.includes('googleads') ||
+                            content.includes('doubleclick')) {
+                            console.log('Blocking ad script:', src);
+                            node.remove();
+                        }
+                    }
+                }
+            });
         });
     });
 
-    // Start observing the player container
-    const playerContainer = document.getElementById('youtube-player');
-    if (playerContainer) {
-        observer.observe(playerContainer, {
+    // Observe the entire document
+    observer.observe(document.documentElement, {
+        childList: true,
+        subtree: true
+    });
+}
+
+// Enhanced ad blocking functionality
+function setupEnhancedAdBlocking() {
+    // Block additional ad-related domains
+    const blockedDomains = [
+        'googleads',
+        'doubleclick',
+        'adservice',
+        'pagead',
+        'googlesyndication',
+        'adnxs',
+        'adform',
+        'adroll',
+        'advertising',
+        'analytics',
+        'tracking',
+        'pixel',
+        'beacon',
+        'stats',
+        'metrics'
+    ];
+
+    // Enhanced fetch blocking
+    const originalFetch = window.fetch;
+    window.fetch = function(...args) {
+        const url = args[0]?.url || args[0];
+        if (url && typeof url === 'string' && blockedDomains.some(domain => url.includes(domain))) {
+            console.log('Blocked fetch request to:', url);
+            return new Promise(() => {});
+        }
+        return originalFetch.apply(this, args);
+    };
+
+    // Enhanced XHR blocking
+    const originalXHROpen = XMLHttpRequest.prototype.open;
+    XMLHttpRequest.prototype.open = function(method, url, ...rest) {
+        if (url && typeof url === 'string' && blockedDomains.some(domain => url.includes(domain))) {
+            console.log('Blocked XHR request to:', url);
+            return;
+        }
+        return originalXHROpen.call(this, method, url, ...rest);
+    };
+
+    // Block WebSocket connections to ad servers
+    const originalWebSocket = window.WebSocket;
+    window.WebSocket = function(url, ...args) {
+        if (url && typeof url === 'string' && blockedDomains.some(domain => url.includes(domain))) {
+            console.log('Blocked WebSocket connection to:', url);
+            return new originalWebSocket('ws://localhost');
+        }
+        return new originalWebSocket(url, ...args);
+    };
+
+    // YouTube-specific ad blocking
+    function blockYouTubeAds() {
+        // Block ad-related elements
+        const adSelectors = [
+            '.ytp-ad-overlay-container',
+            '.ytp-ad-text',
+            '.ytp-ad-skip-button',
+            '.ytp-ad-preview-container',
+            '.ytp-ad-preview-slot',
+            '.ytp-ad-skip-button-modern',
+            '.ytp-ad-skip-button-container',
+            '.ytp-ad-skip-button-icon',
+            '.ytp-ad-skip-button-text',
+            '.ytp-ad-message-container',
+            '.ytp-ad-action-interstitial',
+            '.ytp-ad-action-interstitial-background-container',
+            '.ytp-ad-action-interstitial-content',
+            '.ytp-ad-action-interstitial-dismiss-button',
+            '.ytp-ad-action-interstitial-headline',
+            '.ytp-ad-action-interstitial-description',
+            '.ytp-ad-action-interstitial-action-button',
+            '.ytp-ad-action-interstitial-action-button-text',
+            '.ytp-ad-action-interstitial-action-button-icon',
+            '.ytp-ad-action-interstitial-action-button-icon-container',
+            '.ytp-ad-action-interstitial-action-button-icon-svg',
+            '.ytp-ad-action-interstitial-action-button-icon-path',
+            '.ytp-ad-action-interstitial-action-button-icon-circle',
+            '.ytp-ad-action-interstitial-action-button-icon-rect',
+            '.ytp-ad-action-interstitial-action-button-icon-polygon',
+            '.ytp-ad-action-interstitial-action-button-icon-line',
+            '.ytp-ad-action-interstitial-action-button-icon-ellipse',
+            '.ytp-ad-action-interstitial-action-button-icon-polyline',
+            '.ytp-ad-action-interstitial-action-button-icon-path',
+            '.ytp-ad-action-interstitial-action-button-icon-text',
+            '.ytp-ad-action-interstitial-action-button-icon-image',
+            '.ytp-ad-action-interstitial-action-button-icon-video',
+            '.ytp-ad-action-interstitial-action-button-icon-audio',
+            '.ytp-ad-action-interstitial-action-button-icon-document',
+            '.ytp-ad-action-interstitial-action-button-icon-archive',
+            '.ytp-ad-action-interstitial-action-button-icon-code',
+            '.ytp-ad-action-interstitial-action-button-icon-data',
+            '.ytp-ad-action-interstitial-action-button-icon-other'
+        ];
+
+        // Create and inject CSS to hide ad elements
+        const style = document.createElement('style');
+        style.textContent = adSelectors.map(selector => `${selector} { display: none !important; }`).join('\n');
+        document.head.appendChild(style);
+
+        // Monitor for ad-related mutations
+        const observer = new MutationObserver((mutations) => {
+            mutations.forEach((mutation) => {
+                mutation.addedNodes.forEach((node) => {
+                    if (node.nodeType === 1) { // Element node
+                        // Check for ad-related elements
+                        if (node.matches && adSelectors.some(selector => node.matches(selector))) {
+                            console.log('Removing ad element:', node);
+                            node.remove();
+                        }
+                        // Check child elements
+                        if (node.querySelectorAll) {
+                            adSelectors.forEach(selector => {
+                                node.querySelectorAll(selector).forEach(element => {
+                                    console.log('Removing ad element:', element);
+                                    element.remove();
+                                });
+                            });
+                        }
+                    }
+                });
+            });
+        });
+
+        // Start observing
+        observer.observe(document.documentElement, {
             childList: true,
             subtree: true
         });
     }
 
-    // Add event listener for ad-related messages
-    window.addEventListener('message', (event) => {
-        if (event.source === player.getIframe()) {
-            try {
-                const data = JSON.parse(event.data);
-                if (data && data.event === 'onAdStateChange') {
-                    console.log('Ad state change detected:', data);
-                    // Attempt to skip ad
-                    if (player && player.seekTo) {
-                        player.seekTo(player.getDuration());
-                    }
-                }
-            } catch (error) {
-                // Ignore non-JSON messages
-            }
-        }
-    });
+    // Call YouTube-specific ad blocking
+    blockYouTubeAds();
+}
+
+// Add to the existing setupAdHandlers function
+function setupAdHandlers() {
+    blockAdIframes();
+    setupEnhancedAdBlocking();
+    
+    // Add additional ad-related class blocking
+    const adClasses = [
+        'ytp-ad-overlay-container',
+        'ytp-ad-text',
+        'ytp-ad-skip-button',
+        'ytp-ad-preview-container',
+        'ytp-ad-preview-slot',
+        'ytp-ad-skip-button-modern',
+        'ytp-ad-skip-button-container',
+        'ytp-ad-skip-button-icon',
+        'ytp-ad-skip-button-text',
+        'ytp-ad-skip-button-modern:active',
+        'ytp-ad-skip-button-modern:hover',
+        'ytp-ad-skip-button-modern:focus',
+        'ytp-ad-skip-button-modern:disabled',
+        'ytp-ad-skip-button-modern:not([aria-disabled=true]):hover',
+        'ytp-ad-skip-button-modern:not([aria-disabled=true]):focus',
+        'ytp-ad-skip-button-modern:not([aria-disabled=true]):active',
+        'ytp-ad-skip-button-modern:not([aria-disabled=true]):disabled',
+        'ytp-ad-skip-button-modern:not([aria-disabled=true]):not(:hover):not(:focus):not(:active):not(:disabled)',
+        'ytp-ad-skip-button-modern:not([aria-disabled=true]):not(:hover):not(:focus):not(:active):not(:disabled):hover',
+        'ytp-ad-skip-button-modern:not([aria-disabled=true]):not(:hover):not(:focus):not(:active):not(:disabled):focus',
+        'ytp-ad-skip-button-modern:not([aria-disabled=true]):not(:hover):not(:focus):not(:active):not(:disabled):active',
+        'ytp-ad-skip-button-modern:not([aria-disabled=true]):not(:hover):not(:focus):not(:active):not(:disabled):disabled'
+    ];
+
+    // Create a style element to hide ad-related elements
+    const style = document.createElement('style');
+    style.textContent = adClasses.map(className => `.${className} { display: none !important; }`).join('\n');
+    document.head.appendChild(style);
 } 
