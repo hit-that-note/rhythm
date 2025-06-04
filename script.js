@@ -16,27 +16,8 @@ function onYouTubeIframeAPIReady() {
             'disablekb': 1,
             'fs': 0,
             'rel': 0,
-            'modestbranding': 1,
-            'origin': window.location.origin,
-            'host': 'https://www.youtube-nocookie.com', // Use privacy-enhanced mode
-            'enablejsapi': 1,
-            'widget_referrer': window.location.origin,
+            'adblock': 1, // Disable ads
             'iv_load_policy': 3, // Hide video annotations
-            'cc_load_policy': 0, // Hide closed captions
-            'showinfo': 0, // Hide video title and uploader info
-            'autoplay': 0, // Don't autoplay until explicitly started
-            'mute': 0, // Start unmuted
-            'loop': 0, // Don't loop the video
-            'playlist': '', // No playlist
-            'color': 'white', // Use white progress bar
-            'hl': 'en', // Set language to English
-            'cc_lang_pref': 'en', // Set closed captions language to English
-            'cc_load_policy': 0, // Don't show closed captions by default
-            'playsinline': 1, // Play inline on mobile devices
-            'controls': 0, // Hide video controls
-            'disablekb': 1, // Disable keyboard controls
-            'fs': 0, // Disable fullscreen button
-            'rel': 0, // Don't show related videos
             'modestbranding': 1, // Reduce YouTube branding
             'origin': window.location.origin // Set origin for security
         },
