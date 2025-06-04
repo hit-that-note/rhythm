@@ -16,10 +16,13 @@ function onYouTubeIframeAPIReady() {
             'disablekb': 1,
             'fs': 0,
             'rel': 0,
-            'adblock': 1, // Disable ads
             'iv_load_policy': 3, // Hide video annotations
             'modestbranding': 1, // Reduce YouTube branding
-            'origin': window.location.origin // Set origin for security
+            'origin': window.location.origin, // Set origin for security
+            'autoplay': 1, // Enable autoplay
+            'mute': 1, // Start muted to avoid autoplay restrictions
+            'enablejsapi': 1, // Enable JavaScript API
+            'widget_referrer': window.location.origin // Set referrer
         },
         events: {
             'onReady': onPlayerReady,
