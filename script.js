@@ -620,4 +620,170 @@ document.addEventListener('DOMContentLoaded', () => {
 // Initial call to update displays on page load (before game starts)
 updateScoreDisplay();
 updateAccuracyDisplay();
-updateStreakDisplay(); 
+updateStreakDisplay();
+
+// Add touch event listeners for mobile support
+inputButtons.forEach((button, index) => {
+    // Touch start (equivalent to keydown)
+    button.addEventListener('touchstart', (event) => {
+        event.preventDefault(); // Prevent default touch behavior
+        if (!isGameStarted) return;
+
+        // Prevent processing if key is already held
+        if (heldKeys[index]) {
+            return;
+        }
+
+        // Mark key as held
+        heldKeys[index] = true;
+        console.log(`Touch started on button ${index}. Held keys: ${JSON.stringify(heldKeys)}`);
+
+        // Check for hits in the corresponding lane
+        const notes = notesInLanes[index];
+        let hitRegistered = false;
+
+        // Sort notes by position to prioritize the closest note to the crossbar
+        notes.sort((a, b) => (parseFloat(a.style.top) + a.offsetHeight / 2) - (parseFloat(b.style.top) + b.offsetHeight / 2));
+
+        for (let i = notes.length - 1; i >= 0; i--) {
+            const note = notes[i];
+            const notePosition = parseFloat(note.style.top);
+            const noteCenterPosition = notePosition + note.offsetHeight / 2;
+            const noteBottomPosition = notePosition + note.offsetHeight;
+            const noteType = note.dataset.type || 'regular'; // Default to regular
+
+            // Calculate the hit area boundaries relative to the crossbar
+            const perfectAreaTop = crossbarPosition - perfectWindow;
+            const perfectAreaBottom = crossbarPosition + perfectWindow;
+            const goodAreaTop = crossbarPosition - goodWindow;
+            const goodAreaBottom = crossbarPosition + goodWindow;
+            const badAreaTop = crossbarPosition - badWindow;
+            const badAreaBottom = crossbarPosition + badWindow;
+
+            // --- Hit detection for regular notes ---
+            if (noteType === 'regular' && note.dataset.status === 'falling' && noteCenterPosition > badAreaTop && noteCenterPosition < badAreaBottom) {
+                let hitAccuracy = 'Bad';
+                let scoreIncrease = 50;
+
+                if (noteCenterPosition > goodAreaTop && noteCenterPosition < goodAreaBottom) {
+                    hitAccuracy = 'Good';
+                    scoreIncrease = 100;
+                }
+
+                if (noteCenterPosition > perfectAreaTop && noteCenterPosition < perfectAreaBottom) {
+                    hitAccuracy = 'Perfect';
+                    scoreIncrease = 200;
+                }
+
+                score += scoreIncrease;
+                hitNotes++; // Count regular note hits
+                currentStreak++; // Increment streak on hit
+                updateScoreDisplay();
+                updateAccuracyDisplay();
+                updateStreakDisplay(); // Update streak display
+
+                console.log(`${hitAccuracy}! Score: ${Math.round(score)}, Accuracy: ${(hitNotes / totalNotes) * 100}, Streak: ${currentStreak}`);
+                note.dataset.status = 'hit';
+                removeNote(note, index);
+
+                // Visual feedback for hit button
+                button.classList.add('hit');
+                setTimeout(() => {
+                    button.classList.remove('hit');
+                }, 100);
+
+                showHitFeedback(hitAccuracy, lanes[index]);
+                hitRegistered = true;
+                break; // Only hit the closest note
+            }
+            // If the note has already passed the hit window, it's a miss handled by the fall animation
+            else if (noteType === 'regular' && notePosition > badAreaBottom && note.dataset.status === 'falling') {
+                console.log('Touch after regular note has passed hit window. Not a hit here.');
+            }
+
+            // --- Hit detection for slider notes (start) ---
+            // Check if the head (bottom) of a falling slider note is within the hit window
+            if (noteType === 'slider' && note.dataset.status === 'falling' && noteBottomPosition > badAreaTop && noteBottomPosition < badAreaBottom && !activeSliders[index].includes(note)) {
+                console.log('Slider note head hit window reached, activating slider.');
+                note.dataset.status = 'active'; // Mark slider as active
+                activeSliders[index].push(note); // Add to active sliders
+                activeSliderStartTime[index] = performance.now(); // Store activation time
+                hitRegistered = true; // Consider the start of the slider as a hit
+
+                // Visual feedback
+                note.style.backgroundColor = '#ffd700'; // Change color when active (gold)
+                break; // Only activate the closest slider head
+            }
+        }
+
+        // If no hit was registered AND there is no active slider in this lane, it's a phantom press
+        if (!hitRegistered && !activeSliders[index].some(note => note.dataset.status === 'active')) {
+            console.log('Touch, no note to hit or activate - Phantom Press!');
+            score -= phantomPressPenalty;
+            currentStreak = 0; // Reset streak on phantom press
+            updateScoreDisplay();
+            updateStreakDisplay();
+            showHitFeedback('Miss', lanes[index]); // Show miss feedback for phantom press
+        }
+
+        // Visual feedback on button press
+        button.classList.add('pressed'); // Add a pressed class for styling
+    });
+
+    // Touch end (equivalent to keyup)
+    button.addEventListener('touchend', (event) => {
+        event.preventDefault(); // Prevent default touch behavior
+        if (!isGameStarted) return;
+
+        // Mark key as not held
+        heldKeys[index] = false;
+        console.log(`Touch ended on button ${index}. Held keys: ${JSON.stringify(heldKeys)}`);
+
+        // Visual feedback on button release
+        button.classList.remove('pressed'); // Remove the pressed class
+
+        // --- Slider note completion check on touch end ---
+        // Find the active slider in this lane, if any
+        const activeSlider = activeSliders[index].find(note => note.dataset.status === 'active');
+
+        if (activeSlider) {
+            console.log('Active slider released.');
+            const holdDuration = (performance.now() - activeSliderStartTime[index]) / 1000; // Duration in seconds
+            const requiredDuration = parseFloat(activeSlider.dataset.duration); // Required hold duration
+
+            console.log(`Held for: ${holdDuration.toFixed(2)}s, Required: ${requiredDuration.toFixed(2)}s`);
+
+            // Simple completion check for now: remove if held for at least required duration (within a tolerance)
+            const durationTolerance = 0.1; // seconds tolerance for hold duration
+            if (holdDuration >= requiredDuration - durationTolerance) {
+                console.log('Slider held for sufficient duration. Removing.');
+                score += 50 * requiredDuration; // Example: score proportional to duration
+                hitNotes++; // Count slider hold as one hit for now (can be refined)
+                currentStreak++; // Increment streak
+                updateScoreDisplay();
+                updateAccuracyDisplay(); // Accuracy calculation needs refinement
+                updateStreakDisplay();
+
+                removeNote(activeSlider, index); // Remove the slider note
+                showHitFeedback('Hold!', lanes[index]); // Show feedback for successful hold
+            } else {
+                console.log('Slider released too early. Removing.');
+                score -= missPenalty; // For now, full miss penalty
+                currentStreak = 0; // Reset streak on miss/early release
+                updateScoreDisplay();
+                updateStreakDisplay();
+                removeNote(activeSlider, index); // Remove the slider note
+                showHitFeedback('Early', lanes[index]); // Show feedback for early release
+            }
+
+            // Remove from active sliders regardless of success/failure
+            activeSliders[index] = activeSliders[index].filter(s => s !== activeSlider);
+            delete activeSliderStartTime[index]; // Clear the start time
+        }
+    });
+
+    // Prevent default touch behavior on the button
+    button.addEventListener('touchmove', (event) => {
+        event.preventDefault();
+    });
+}); 
