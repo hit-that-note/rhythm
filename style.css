@@ -1,0 +1,631 @@
+body {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    background-color: #0a0a0a; /* Dark background as in image */
+    margin: 0;
+    color: white;
+    font-family: sans-serif;
+    overflow-y: auto; /* Allow scrolling if content exceeds viewport height */
+}
+
+.container {
+    display: flex;
+    flex-direction: row; /* Arrange game area and side panel side-by-side */
+    align-items: flex-start; /* Align items to the top */
+    width: auto; /* Adjust width based on content */
+    max-width: none; /* No max width restriction for the overall game screen layout */
+    margin: 0 auto; /* Center the container itself */
+    gap: 20px; /* Add gap between game area and side panel */
+}
+
+.top-bar {
+    /* This will be used for score and accuracy display */
+    position: static; /* Remove absolute positioning */
+    display: flex; /* Arrange score, accuracy, and streak horizontally */
+    flex-direction: row; /* Arrange score, accuracy, and streak horizontally */
+    justify-content: space-between; /* Distribute space between items */
+    align-items: center;
+    width: 100%; /* Take full width within game-area */
+    padding: 0; /* No padding */
+    border-bottom: none; /* No border */
+    background: none; /* No background */
+    margin: 0; /* No margin */
+    z-index: auto; /* Reset z-index */
+}
+
+.top-button {
+    background-color: #333;
+    color: white;
+    border: 1px solid #555;
+    padding: 10px 15px;
+    cursor: pointer;
+    margin-right: 10px;
+    border-radius: 5px; /* Rounded corners */
+}
+
+.top-button:last-child {
+    margin-right: 0;
+}
+
+.search-bar {
+    display: flex;
+    align-items: center;
+    background-color: #333;
+    border: 1px solid #555;
+    border-radius: 5px;
+    padding: 5px;
+}
+
+.search-bar input {
+    background: none;
+    border: none;
+    outline: none;
+    color: white;
+    padding: 3px;
+    margin-right: 5px;
+}
+
+.search-bar button {
+    background-color: #555;
+    border: none;
+    color: white;
+    padding: 5px 10px;
+    border-radius: 3px;
+    cursor: pointer;
+}
+
+.auth-buttons .top-button {
+    margin-left: 10px;
+    margin-right: 0;
+}
+
+.game-area {
+    display: flex;
+    flex-direction: column; /* Stack game elements and chat vertically */
+    align-items: center; /* Center horizontally */
+    width: 300px; /* Set a fixed width to prevent shifting */
+    margin-top: 0; /* No top margin */
+    flex-shrink: 0; /* Prevent shrinking */
+    gap: 20px; /* Add space between vertically stacked elements */
+}
+
+.game-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    position: relative;
+    flex-shrink: 0; /* Prevent game container from shrinking */
+    width: 300px; /* Set a fixed width for the game container */
+}
+
+.stats-container {
+    display: none; 
+}
+
+.score-display,
+.accuracy-display,
+.streak-display {
+    color: white;
+    font-size: 1.2rem;
+    font-weight: bold;
+    margin-bottom: 0; /* Remove bottom margin */
+    min-width: 80px; /* Adjust minimum width for stats */
+}
+
+.game-lanes {
+    display: flex;
+    width: 300px; /* Ensure game lanes have a fixed width */
+    height: 500px; /* Adjust as needed based on image */
+    border: 1px solid white; /* White border as in image */
+    position: relative; /* Needed for absolute positioning of notes and hit feedback */
+    overflow: hidden; /* Hide elements outside the lanes */
+    background-color: #1c1c1c; /* Darker background for lanes based on image */
+    box-sizing: border-box; /* Include border in dimensions */
+}
+
+.lane {
+    flex-grow: 1;
+    border-right: 1px solid #333; /* Lane separators */
+    position: relative; /* Needed for absolute positioning of notes and hit feedback */
+    overflow: hidden; /* Ensure notes are clipped if they go outside the lane bounds */
+    /* No background highlight as in image */
+}
+
+.lane:last-child {
+    border-right: none;
+}
+
+.hit-crossbar {
+    position: absolute;
+    width: 100%;
+    height: 2px; /* Thinner crossbar as in image */
+    background-color: #fff; /* White crossbar as in image */
+    top: 80%; /* Adjust vertical position as needed (e.g., 50% for middle) */
+    left: 0;
+    z-index: 3; /* Ensure it's above notes */
+    /* No glow on crossbar based on image */
+}
+
+.input-area {
+    display: flex;
+    margin-top: 20px;
+    gap: 10px; /* Add gap back for input buttons */
+    width: 300px; /* Set a fixed width for the input area to match lanes */
+    justify-content: space-between; /* Distribute space between buttons */
+}
+
+.input-button {
+    width: 65px; /* Adjust button width to fit within the 300px input area with gaps */
+    height: 50px; /* Adjust as needed */
+    margin: 0; /* Remove margins as gap is used for spacing */
+    background-color: #222; /* Dark background */
+    color: white;
+    border: 1px solid white; /* White border */
+    cursor: pointer;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 1.5em;
+    transition: background-color 0.1s ease; /* Smooth transition for feedback */
+    border-radius: 8px; /* More rounded buttons */
+}
+
+.input-button:hover {
+    background-color: #333; /* Darken slightly on hover */
+}
+
+.input-button.hit {
+    background-color: #fff; /* White flash on hit */
+    box-shadow: 0 0 15px 5px rgba(255, 255, 255, 0.7); /* Optional: Add a brighter glow */
+}
+
+.note {
+    position: absolute;
+    width: calc(100% - 10px); /* Match lane width with padding */
+    left: 5px;
+    background: #00ff00; /* Green color based on image */
+    border-radius: 5px;
+    transition: none; /* Remove transition to avoid interference with JS animation */
+    height: 20px; /* Explicit height */
+    z-index: 2; /* Ensure notes are above the background */
+    display: block; /* Ensure the element is displayed */
+    opacity: 1; /* Ensure the element is not transparent */
+    visibility: visible; /* Ensure the element is visible */
+    box-sizing: border-box;
+}
+
+.note.miss {
+    background: #f44336; /* Keep current miss color for clarity */
+}
+
+.note.held {
+    background-color: #00bfff; /* Blue color for held notes */
+    /* Example height - this will be set dynamically */
+    /* Maybe add a different border or animation for held */
+}
+
+/* Floating hit feedback text */
+.hit-feedback {
+    position: absolute;
+    top: 75%; /* Position slightly above the crossbar */
+    left: 50%; /* Center horizontally within the lane */
+    transform: translate(-50%, 0); /* Adjust for centering */
+    font-size: 1.5em;
+    font-weight: bold;
+    opacity: 1;
+    pointer-events: none; /* Allow clicks to pass through */
+    animation: fade-and-move-up 0.5s ease-out forwards; /* Animation */
+    z-index: 20; /* Ensure feedback is on top */
+}
+
+.hit-feedback.perfect {
+    color: #00ff00; /* Green for perfect */
+}
+
+.hit-feedback.good {
+    color: #ffff00; /* Yellow for good */
+}
+
+.hit-feedback.bad {
+    color: #ffa500; /* Orange for bad */
+}
+
+.hit-feedback.miss {
+    color: #ff0000; /* Red for miss */
+}
+
+@keyframes fade-and-move-up {
+    to {
+        top: 65%; /* Move upwards */
+        opacity: 0; /* Fade out */
+    }
+}
+
+.side-panel {
+    width: 400px;
+    background: #2a2a2a;
+    border-radius: 10px;
+    padding: 20px;
+    flex-shrink: 0;
+    display: flex; /* Use flexbox to arrange internal elements vertically */
+    flex-direction: column;
+    gap: 15px; /* Add space between the sections within the side panel */
+}
+
+.song-info,
+.visualizer,
+.volume-controls,
+.animation-toggle,
+.play-button {
+    border: 1px solid #333;
+    padding: 10px;
+    border-radius: 5px;
+    background-color: #1a1a1a; /* Match lane background */
+}
+
+.song-info p {
+    margin: 5px 0 0; /* Adjust margin for song info paragraphs */
+    color: #aaa; /* Slightly lighter text */
+    font-size: 0.9rem;
+}
+
+.visualizer {
+    min-height: 100px; /* Placeholder height */
+    background-color: #2a2a2a; /* Darker placeholder */
+}
+
+.volume-controls {
+    display: flex;
+    align-items: center;
+    gap: 10px; /* Space between volume elements */
+}
+
+.volume-controls span {
+    font-size: 0.9em;
+    text-transform: uppercase;
+}
+
+.volume-bar {
+    flex-grow: 1;
+    height: 10px;
+    background-color: #555;
+    border-radius: 5px;
+}
+
+.volume-controls button {
+    background-color: #333;
+    border: 1px solid #555;
+    color: white;
+    padding: 5px 10px;
+    border-radius: 3px;
+    cursor: pointer;
+}
+
+.animation-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.animation-toggle span {
+    font-size: 0.9em;
+    margin-right: 10px;
+}
+
+/* Basic Switch CSS (from example) */
+.animation-toggle .switch {
+    position: relative;
+    display: inline-block;
+    width: 30px;
+    height: 17px;
+}
+
+.animation-toggle .switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.animation-toggle .slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    -webkit-transition: .4s;
+    transition: .4s;
+}
+
+.animation-toggle .slider:before {
+    position: absolute;
+    content: "";
+    height: 13px;
+    width: 13px;
+    left: 2px;
+    bottom: 2px;
+    background-color: white;
+    -webkit-transition: .4s;
+    transition: .4s;
+}
+
+.animation-toggle input:checked + .slider {
+    background-color: #2196F3;
+}
+
+.animation-toggle input:focus + .slider {
+    box-shadow: 0 0 1px #2196F3;
+}
+
+.animation-toggle input:checked + .slider:before {
+    -webkit-transform: translateX(13px);
+    -ms-transform: translateX(13px);
+    transform: translateX(13px);
+}
+
+/* Rounded sliders */
+.animation-toggle .slider.round {
+    border-radius: 17px;
+}
+
+.animation-toggle .slider.round:before {
+    border-radius: 50%;
+}
+
+.play-button {
+    background-color: #007bff; /* Example color */
+    color: white;
+    border: none;
+    padding: 10px;
+    text-align: center;
+    font-size: 1.2em;
+    cursor: pointer;
+    border-radius: 5px;
+}
+
+.chat-area {
+    margin-top: 0; /* Remove top margin as gap is handled by game-area */
+    background: #2a2a2a;
+    border-radius: 10px;
+    padding: 20px;
+    color: white;
+    width: 100%; /* Take full width within game-area */
+    box-sizing: border-box;
+    /* Ensure chat area is below the vertical layout */
+    margin-left: auto; /* Center chat area if game-area is wider */
+    margin-right: auto;
+}
+
+.chat-area p {
+    margin: 5px 0; /* Space out chat lines */
+    font-size: 0.9em;
+    color: #bbb; /* Slightly lighter text */
+}
+
+.chat-input {
+    height: 30px; /* Placeholder */
+    border: 1px solid #555;
+    margin-top: 10px;
+    border-radius: 3px;
+    background-color: #2a2a2a; /* Darker input background */
+}
+
+/* Song Selection Screen */
+.song-selection {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 2rem;
+    min-height: 100vh;
+    background: #1a1a1a;
+    color: white;
+}
+
+.song-selection h1 {
+    margin-bottom: 2rem;
+    font-size: 2.5rem;
+    color: #fff;
+}
+
+.song-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 2rem;
+    max-width: 1200px;
+    width: 100%;
+}
+
+.song-card {
+    background: #2a2a2a;
+    border-radius: 10px;
+    overflow: hidden;
+    cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.song-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+}
+
+.song-thumbnail {
+    width: 100%;
+    aspect-ratio: 16/9;
+    overflow: hidden;
+}
+
+.song-thumbnail img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.song-info {
+    padding: 1rem;
+}
+
+.song-info h3 {
+    margin: 0;
+    font-size: 1.2rem;
+    color: #fff;
+}
+
+.song-info p {
+    margin: 0.5rem 0 0;
+    color: #aaa;
+    font-size: 0.9rem;
+}
+
+/* Game Screen */
+.game-screen {
+    width: 100%;
+    min-height: 100vh;
+    background: #0a0a0a; /* Dark background as in image */
+    display: flex;
+    justify-content: center; /* Center content horizontally */
+    align-items: center; /* Center content vertically */
+    padding: 0; /* No padding to match image */
+    box-sizing: border-box;
+    position: relative; /* Needed for absolute positioning of top-bar */
+}
+
+.game-container {
+    display: flex;
+    flex-direction: column; /* Stack game lanes and input area vertically */
+    align-items: center; /* Center horizontally */
+    position: relative; /* Needed for absolute positioning of children */
+    /* No background or padding here to match the image */
+}
+
+.game-lanes {
+    display: flex;
+    width: 300px; /* Adjust as needed based on image */
+    height: 500px; /* Adjust as needed based on image */
+    border: 1px solid white; /* White border as in image */
+    position: relative; /* Needed for absolute positioning of notes and hit feedback */
+    overflow: hidden; /* Hide elements outside the lanes */
+    background-color: #1c1c1c; /* Darker background for lanes based on image */
+}
+
+.lane {
+    flex-grow: 1;
+    border-right: 1px solid #333; /* Lane separators */
+    position: relative; /* Needed for absolute positioning of notes and hit feedback */
+    overflow: hidden; /* Ensure notes are clipped if they go outside the lane bounds */
+    /* No background highlight as in image */
+}
+
+.lane:last-child {
+    border-right: none;
+}
+
+.hit-crossbar {
+    position: absolute;
+    width: 100%;
+    height: 2px; /* Thinner crossbar as in image */
+    background-color: #fff; /* White crossbar as in image */
+    top: 80%; /* Adjust vertical position as needed (e.g., 50% for middle) */
+    left: 0;
+    z-index: 3; /* Ensure it's above notes */
+    /* No glow on crossbar based on image */
+}
+
+.input-area {
+    display: flex;
+    margin-top: 20px;
+    gap: 10px; /* Add gap back for input buttons */
+}
+
+.input-button {
+    width: 75px; /* Adjust as needed */
+    height: 50px; /* Adjust as needed */
+    margin: 0 5px;
+    background-color: #222; /* Dark background */
+    color: white;
+    border: 1px solid white; /* White border */
+    cursor: pointer;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 1.5em;
+    transition: background-color 0.1s ease; /* Smooth transition for feedback */
+    border-radius: 8px; /* More rounded buttons */
+}
+
+.input-button:hover {
+    background-color: #333; /* Darken slightly on hover */
+}
+
+.input-button.hit {
+    background-color: #fff; /* White flash on hit */
+    /* Removed box-shadow to match image */
+}
+
+/* Note styles */
+.note {
+    position: absolute;
+    width: calc(100% - 10px); /* Match lane width with padding */
+    left: 5px;
+    background: #00ff00; /* Green color based on image */
+    border-radius: 5px;
+    transition: none; /* Remove transition to avoid interference with JS animation */
+    height: 20px; /* Explicit height */
+    z-index: 2; /* Ensure notes are above the background */
+    display: block; /* Ensure the element is displayed */
+    opacity: 1; /* Ensure the element is not transparent */
+    visibility: visible; /* Ensure the element is visible */
+    box-sizing: border-box;
+    /* No glow on notes based on image */
+}
+
+.note.miss {
+    background: #f44336; /* Keep current miss color for clarity */
+}
+
+/* Floating hit feedback text */
+.hit-feedback {
+    position: absolute;
+    top: 75%; /* Position slightly above the crossbar */
+    left: 50%; /* Center horizontally within the lane */
+    transform: translate(-50%, 0); /* Adjust for centering */
+    font-size: 1.5em;
+    font-weight: bold;
+    opacity: 1;
+    pointer-events: none; /* Allow clicks to pass through */
+    animation: fade-and-move-up 0.5s ease-out forwards; /* Animation */
+    z-index: 20; /* Ensure feedback is on top */
+}
+
+.hit-feedback.perfect {
+    color: #00ff00; /* Green for perfect */
+}
+
+.hit-feedback.good {
+    color: #ffff00; /* Yellow for good */
+}
+
+.hit-feedback.bad {
+    color: #ffa500; /* Orange for bad */
+}
+
+.hit-feedback.miss {
+    color: #ff0000; /* Red for miss */
+}
+
+@keyframes fade-and-move-up {
+    to {
+        top: 65%; /* Move upwards */
+        opacity: 0; /* Fade out */
+    }
+}
+
+#youtube-player {
+    width: 100%;
+    aspect-ratio: 16/9;
+    background: #000;
+    border-radius: 5px;
+    overflow: hidden;
+}
